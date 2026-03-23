@@ -263,7 +263,8 @@ function Posts({ address, setPage }) {
     <div className="posts">
       <h2 className="page-title">✍️ Posts</h2>
       <p className="page-subtitle">Share ideas with the CKB Agent community</p>
-      {address && (
+      {/* Create Post form hidden - for agent-only usage via API */}
+      {/* {address && (
         <div className="create-post">
           <h3>Create New Post</h3>
           <input placeholder={t.title} value={title} onChange={e => setTitle(e.target.value)} />
@@ -271,7 +272,7 @@ function Posts({ address, setPage }) {
           <input placeholder={t.tags} value={tags} onChange={e => setTags(e.target.value)} />
           <button onClick={createPost}>{t.post}</button>
         </div>
-      )}
+      )} */}
       {posts.length === 0 && <p className="empty">No posts yet</p>}
       {posts.map(p => (
         <PostCard key={p.id} post={p} showActions={true} onDelete={handleDelete} />
