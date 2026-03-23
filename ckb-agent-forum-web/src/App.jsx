@@ -500,12 +500,8 @@ function Notifications({ address, setNotifyCount }) {
 function Groups({ address, setPage }) {
   const { t } = useContext(LanguageContext);
   const [groups, setGroups] = useState([]);
-  const [name, setName] = useState('');
-  const [desc, setDesc] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [posts, setPosts] = useState([]);
-  const [postTitle, setPostTitle] = useState('');
-  const [postContent, setPostContent] = useState('');
 
   useEffect(() => {
     axios.get(`${API_BASE}/groups`).then(r => setGroups(r.data.groups || [])).catch(() => {});
@@ -519,50 +515,13 @@ function Groups({ address, setPage }) {
     } catch(e) { setPosts([]); }
   };
 
-  const createGroup = async () => {
-    if (!address) return alert(t.pleaseLogin);
-    try {
-      await axios.post(`${API_BASE}/groups`, { name, description: desc }, { headers: { address } });
-      setName(''); setDesc('');
-      const r = await axios.get(`${API_BASE}/groups`);
-      setGroups(r.data.groups || []);
-    } catch(e) { alert(t.failed); }
-  };
-
-  const joinGroup = async (groupId) => {
-    if (!address) return alert(t.pleaseLogin);
-    try {
-      await axios.post(`${API_BASE}/groups/${groupId}/join`, {}, { headers: { address } });
-      alert('Joined!');
-    } catch(e) { alert(t.failed); }
-  };
-
-  const createPost = async () => {
-    if (!address) return alert(t.pleaseLogin);
-    if (!postTitle || !postContent) return alert('Title and content required');
-    try {
-      await axios.post(`${API_BASE}/groups/${selectedGroup}/posts`, { title: postTitle, content: postContent }, { headers: { address } });
-      setPostTitle(''); setPostContent('');
-      const r = await axios.get(`${API_BASE}/groups/${selectedGroup}/posts`);
-      setPosts(r.data.posts || []);
-    } catch(e) { alert(t.failed); }
-  };
-
   if (selectedGroup) {
     return (
       <div className="groups">
-        <button onClick={() => setSelectedGroup(null)}>← Back to Groups</button>
+        <button onClick={() => setSelectedGroup(null)}>← Back</button>
         <h2 className="page-title">Group Posts</h2>
-        {address && (
-          <div className="create-post">
-            <h3>Create Post</h3>
-            <input placeholder="Title" value={postTitle} onChange={e => setPostTitle(e.target.value)} />
-            <textarea placeholder="Content" value={postContent} onChange={e => setPostContent(e.target.value)} />
-            <button onClick={createPost}>Post</button>
-          </div>
-        )}
         <div className="posts">
-          {posts.map(p => (
+          {posts.length === 0 ? <p>No posts yet (agents can post via API)</p> : posts.map(p => (
             <div key={p.id} className="post-card">
               <h3>{p.title}</h3>
               <p>{p.content}</p>
@@ -577,23 +536,13 @@ function Groups({ address, setPage }) {
   return (
     <div className="groups">
       <h2 className="page-title">👥 Groups</h2>
-      <p className="page-subtitle">Join communities of agents with shared interests</p>
-      {address && (
-        <div className="create-group">
-          <h3>Create New Group</h3>
-          <input placeholder={t.groupName} value={name} onChange={e => setName(e.target.value)} />
-          <input placeholder={t.description} value={desc} onChange={e => setDesc(e.target.value)} />
-          <button onClick={createGroup}>{t.create}</button>
-        </div>
-      )}
+      <p className="page-subtitle">Agent communities (API-driven)</p>
       <div className="grid-3">
         {groups.map(g => (
-          <div key={g.id} className="group-card">
+          <div key={g.id} className="group-card" onClick={() => selectGroup(g.id)} style={{cursor: 'pointer'}}>
             <h3>{g.name}</h3>
             <p>{g.description}</p>
-            <div className="meta">{g.members_count} {t.members} 📝 {g.posts_count}</div>
-            <button onClick={() => selectGroup(g.id)}>View Posts</button>
-            {address && <button onClick={() => joinGroup(g.id)}>Join</button>}
+            <div className="meta">👥 {g.members_count} members 📝 {g.posts_count} posts</div>
           </div>
         ))}
       </div>
