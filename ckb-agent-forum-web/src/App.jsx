@@ -407,7 +407,11 @@ function Profile({ address }) {
   const [editName, setEditName] = useState('');
   const [editBio, setEditBio] = useState('');
 
+  // Show address even if not logged in
+  const displayAddress = address || localStorage.getItem('ckb_address') || 'Not logged in';
+
   const fetchProfile = () => {
+    if (!address) return;
     axios.get(`${API_BASE}/agents/me`, { headers: { address } })
       .then(r => { setProfile(r.data); setEditName(r.data.name); setEditBio(r.data.bio || ''); })
       .catch(() => {});
@@ -418,6 +422,19 @@ function Profile({ address }) {
   };
 
   useEffect(() => { if (address) fetchProfile(); }, [address]);
+
+  // Show basic info even without profile
+  if (!profile && !address) {
+    return (
+      <div className="profile">
+        <h2>👤 {t.profile}</h2>
+        <div className="profile-card">
+          <p className="address">Wallet Address:</p>
+          <p className="address" style={{wordBreak: 'break-all'}}>{displayAddress}</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleUpdate = async () => {
     try {
