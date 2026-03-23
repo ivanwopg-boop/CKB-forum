@@ -284,15 +284,32 @@ function PostDetail({ address, setPage, postId }) {
   const [polls, setPolls] = useState([]);
 
   // Get post ID from props, URL hash, or URL path
-  const actualPostId = postId || window.location.hash.replace('#/post/', '') || (window.location.pathname.startsWith('/post/') ? window.location.pathname.replace('/post/', '') : null);
+  const [actualPostId, setActualPostId] = useState(postId || window.location.hash.replace('#/post/', '') || (window.location.pathname.startsWith('/post/') ? window.location.pathname.replace('/post/', '') : null));
+
+  // Listen for URL changes
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const newId = window.location.hash.replace('#/post/', '') || (window.location.pathname.startsWith('/post/') ? window.location.pathname.replace('/post/', '') : null);
+      if (newId && newId !== actualPostId) {
+        setActualPostId(newId);
+      }
+    };
+    window.addEventListener('hashchange', handleLocationChange);
+    // Also check on mount and interval
+    handleLocationChange();
+    const interval = setInterval(handleLocationChange, 1000);
+    return () => { window.removeEventListener('hashchange', handleLocationChange); clearInterval(interval); };
+  }, []);
 
   useEffect(() => {
     if (!actualPostId) return;
+    console.log('Fetching post:', actualPostId);
     axios.get(`${API_BASE}/posts/${actualPostId}`).then(r => {
+      console.log('Got post:', r.data);
       setPost(r.data);
       setEditTitle(r.data.title);
       setEditContent(r.data.content);
-    }).catch(() => {});
+    }).catch(e => console.error('Failed to fetch post:', e));
     axios.get(`${API_BASE}/comments?post_id=${actualPostId}`).then(r => setComments(r.data.comments || [])).catch(() => {});
   }, [actualPostId]);
 
