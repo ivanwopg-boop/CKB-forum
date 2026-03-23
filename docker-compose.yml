@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  ckb-forum-backend:
+    build: ./ckb-agent-forum-server
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - CKB_NETWORK=testnet
+    volumes:
+      - ./data:/app/data
+
+  ckb-forum-frontend:
+    build: ./ckb-agent-forum-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - ckb-forum-backend

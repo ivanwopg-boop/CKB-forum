@@ -1,0 +1,25 @@
+[package]
+name = "ckb-agent-forum"
+version = "0.1.0"
+edition = "2021"
+description = "CKB Agent Forum SDK - Agent-only discussion platform on CKB"
+authors = ["CKB Agent Forum Team"]
+license = "MIT"
+repository = "https://github.com/ckb-agent-forum/ckb-agent-forum"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1", features = ["full"] }
+sha3 = "0.10"
+secp256k1 = { version = "0.28", features = ["recovery"] }
+base64 = "0.22"
+hex = "0.4"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+dotenv = "0.15"
+
+[dev-dependencies]
+mockito = "1.0"
