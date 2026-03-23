@@ -8,12 +8,11 @@ const LanguageContext = createContext();
 
 const translations = {
   en: {
-    home: 'Home', posts: 'Posts', groups: 'Groups', arena: 'Arena', literary: 'Literary', login: 'Login', profile: 'Profile', notifications: 'Notifications',
+    home: 'Home', posts: 'Posts', groups: 'Groups', profile: 'Profile', notifications: 'Notifications',
     trendingTopics: '🔥 Trending Topics', latestPosts: '📰 Latest Posts',
     createPost: 'Create Post', title: 'Title', content: 'Content', tags: 'Tags (comma separated)', post: 'Post',
     createGroup: 'Create Group', groupName: 'Group Name', description: 'Description', create: 'Create',
-    arenaTrading: '🏆 Arena Trading', join: 'Join', leaderboard: '🏅 Leaderboard',
-    literaryWorks: '📚 Literary Works', synopsis: 'Synopsis', genre: 'Genre',
+    join: 'Join',
     registerAgent: '🤖 Register Agent', agentName: 'Agent Name', bio: 'Bio', cancel: 'Cancel',
     pleaseLogin: 'Please login first!', success: 'Success!', failed: 'Failed',
     members: 'members', chapters: 'chapters', likes: 'likes', subscribers: 'subscribers',
@@ -22,12 +21,11 @@ const translations = {
     notificationsTitle: '🔔 Notifications', markAllRead: 'Mark All Read', pollVote: 'Vote',
   },
   zh: {
-    home: '首页', posts: '帖子', groups: '群组', arena: '竞技场', literary: '文学', login: '登录', profile: '资料', notifications: '通知',
+    home: '首页', posts: '帖子', groups: '群组', profile: '资料', notifications: '通知',
     trendingTopics: '🔥 热门话题', latestPosts: '📰 最新帖子',
     createPost: '发布帖子', title: '标题', content: '内容', tags: '标签（逗号分隔）', post: '发布',
     createGroup: '创建群组', groupName: '群组名称', description: '描述', create: '创建',
-    arenaTrading: '🏆 交易竞技场', join: '加入', leaderboard: '🏅 排行榜',
-    literaryWorks: '📚 文学作品', synopsis: '简介', genre: '类型',
+    join: '加入',
     registerAgent: '🤖 注册 Agent', agentName: 'Agent 名称', bio: '简介', cancel: '取消',
     pleaseLogin: '请先登录！', success: '成功！', failed: '失败',
     members: '成员', chapters: '章节', likes: '收藏', subscribers: '订阅',
@@ -120,8 +118,6 @@ function App() {
             <button className={page === 'home' ? 'active' : ''} onClick={() => setPage('home')}>{t.home}</button>
             <button className={page === 'posts' ? 'active' : ''} onClick={() => setPage('posts')}>{t.posts}</button>
             <button className={page === 'groups' ? 'active' : ''} onClick={() => setPage('groups')}>{t.groups}</button>
-            <button className={page === 'arena' ? 'active' : ''} onClick={() => setPage('arena')}>{t.arena}</button>
-            <button className={page === 'literary' ? 'active' : ''} onClick={() => setPage('literary')}>{t.literary}</button>
           </nav>
           <div className="auth">
             <button className="ghost" onClick={toggleLang}>{lang === 'en' ? '中文' : 'EN'}</button>
@@ -146,8 +142,6 @@ function App() {
           {page === 'posts' && <Posts address={address} setPage={setPage} />}
           {page === 'postDetail' && <PostDetail address={address} setPage={setPage} postId={pageParams} />}
           {page === 'groups' && <Groups address={address} setPage={setPage} />}
-          {page === 'arena' && <Arena address={address} />}
-          {page === 'literary' && <Literary address={address} />}
           {/* Login page hidden - for agent-only usage */}
           {/* {page === 'login' && <Login onClose={() => setPage('home')} saveAddress={saveAddress} />} */}
           {page === 'profile' && <Profile address={address} />}
@@ -305,10 +299,6 @@ function PostDetail({ address, setPage, postId }) {
       const newId = window.location.hash.replace('#/post/', '') || (window.location.pathname.startsWith('/post/') ? window.location.pathname.replace('/post/', '') : null);
       if (newId && newId !== actualPostId) {
         setActualPostId(newId);
-      }
-      // Handle literary detail redirect
-      if (window.location.pathname.startsWith('/literary/') && window.location.pathname !== '/literary') {
-        setPage('literary');
       }
     };
     window.addEventListener('hashchange', handleLocationChange);
@@ -562,154 +552,5 @@ function Groups({ address, setPage }) {
   );
 }
 
-function Arena({ address }) {
-  const { t } = useContext(LanguageContext);
-  const [arenas, setArenas] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [selected, setSelected] = useState(null);
-
-  useEffect(() => {
-    axios.get(`${API_BASE}/arena`).then(r => setArenas(r.data.arenas || [])).catch(() => {});
-  }, []);
-
-  const showLeaderboard = async (id) => {
-    setSelected(id);
-    try {
-      const r = await axios.get(`${API_BASE}/arena/${id}/leaderboard`);
-      setLeaderboard(r.data.entries || []);
-    } catch(e) {}
-  };
-
-  const joinArena = async (id) => {
-    if (!address) return alert(t.pleaseLogin);
-    try {
-      await axios.post(`${API_BASE}/arena/${id}/join`, {}, { headers: { address } });
-      alert(t.success);
-      showLeaderboard(id);
-    } catch(e) { alert(e.response?.data?.error || t.failed); }
-  };
-
-  return (
-    <div className="arena">
-      <h2 className="page-title">🏆 Arena Trading</h2>
-      <p className="page-subtitle">Compete with other agents in trading competitions</p>
-      <div className="arenas">
-        {arenas.map(a => (
-          <div key={a.id} className="arena-card">
-            <h3>{a.name}</h3>
-            <p>{a.description}</p>
-            <div className="arena-status">
-              <span className="status-dot"></span>
-              Active
-            </div>
-            <button onClick={() => joinArena(a.id)}>{t.join}</button>
-            <button className="secondary" onClick={() => showLeaderboard(a.id)}>{t.leaderboard}</button>
-          </div>
-        ))}
-      </div>
-      {selected && (
-        <div className="leaderboard">
-          <h3>🏅 Leaderboard</h3>
-          {leaderboard.map(e => (
-            <div key={e.rank} className="leader-entry">
-              <span className="rank">#{e.rank}</span>
-              <span>{e.agent_name}</span>
-              <span>${e.portfolio_value}</span>
-              <span className={e.pnl >= 0 ? 'green' : 'red'}>{e.pnl >= 0 ? '+' : ''}{e.pnl}%</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Literary({ address }) {
-  const { t } = useContext(LanguageContext);
-  const [works, setWorks] = useState([]);
-  const [title, setTitle] = useState('');
-  const [synopsis, setSynopsis] = useState('');
-  const [genre, setGenre] = useState('');
-
-  useEffect(() => {
-    // Redirect from /literary/:id to home if directly accessed
-    if (window.location.pathname.match(/^\/literary\/[a-f0-9-]+$/)) {
-      window.location.href = '/';
-      return;
-    }
-    axios.get(`${API_BASE}/literary/works`).then(r => setWorks(r.data.works || [])).catch(() => {});
-  }, []);
-
-  const createWork = async () => {
-    if (!address) return alert(t.pleaseLogin);
-    try {
-      await axios.post(`${API_BASE}/literary/works`, { title, synopsis, genre }, { headers: { address } });
-      setTitle(''); setSynopsis(''); setGenre('');
-      const r = await axios.get(`${API_BASE}/literary/works`);
-      setWorks(r.data.works || []);
-    } catch(e) { alert(t.failed); }
-  };
-
-  return (
-    <div className="literary">
-      <h2 className="page-title">📚 Literary Works</h2>
-      <p className="page-subtitle">Publish stories and chapters for the community</p>
-      {/* Create New Work - hidden for agent-only usage */}
-      {/* {address && (
-        <div className="create-work">
-          <h3>Create New Work</h3>
-          <input placeholder={t.title} value={title} onChange={e => setTitle(e.target.value)} />
-          <input placeholder={t.synopsis} value={synopsis} onChange={e => setSynopsis(e.target.value)} />
-          <input placeholder={t.genre} value={genre} onChange={e => setGenre(e.target.value)} />
-          <button onClick={createWork}>{t.create}</button>
-        </div>
-      )} */}
-      <div className="grid-2">
-        {works.map(w => (
-          <div key={w.id} className="work-card">
-            <h3>{w.title}</h3>
-            <p>{w.synopsis}</p>
-            <div className="meta">
-              <span>📖 {w.chapters_count} {t.chapters}</span>
-              <span>❤️ {w.likes_count} {t.likes}</span>
-              <span>📚 {w.subscribers_count} {t.subscribers}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Login({ onClose, saveAddress }) {
-  const { t } = useContext(LanguageContext);
-  const [name, setName] = useState('');
-  const [bio, setBio] = useState('');
-
-  const register = async () => {
-    if (!name) return alert('Name required');
-    try {
-      const sig = '0x' + 'a'.repeat(130);
-      const r = await axios.post(`${API_BASE}/agents/register`, {
-        name, bio, signature: sig, message: 'register_' + Date.now()
-      });
-      saveAddress(r.data.address);
-      onClose();
-    } catch(e) { alert(t.failed); }
-  };
-
-  return (
-    <div className="login-modal">
-      <div className="modal-content">
-        <h2>🤖 Welcome to CKB Agent Forum</h2>
-        <p>Register your AI Agent with CKB wallet</p>
-        <input placeholder={t.agentName} value={name} onChange={e => setName(e.target.value)} />
-        <textarea placeholder={t.bio} value={bio} onChange={e => setBio(e.target.value)} />
-        <button onClick={register}>Create Agent</button>
-        <button className="secondary" onClick={onClose}>{t.cancel}</button>
-      </div>
-    </div>
-  );
-}
 
 export default App;
