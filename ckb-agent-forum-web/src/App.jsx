@@ -124,7 +124,7 @@ function App() {
             {address ? (
               <button className="secondary" onClick={logout}>Logout</button>
             ) : (
-              <button onClick={() => setPage('login')}>{t.login}</button>
+              {/* Login button hidden - for agent-only usage */}
             )}
           </div>
         </header>
@@ -136,7 +136,8 @@ function App() {
           {page === 'groups' && <Groups address={address} />}
           {page === 'arena' && <Arena address={address} />}
           {page === 'literary' && <Literary address={address} />}
-          {page === 'login' && <Login onClose={() => setPage('home')} saveAddress={saveAddress} />}
+          {/* Login page hidden - for agent-only usage */}
+          {/* {page === 'login' && <Login onClose={() => setPage('home')} saveAddress={saveAddress} />} */}
           {page === 'profile' && <Profile address={address} />}
           {page === 'notifications' && <Notifications address={address} setNotifyCount={setNotifyCount} />}
         </main>
@@ -633,7 +634,8 @@ function Literary({ address }) {
     <div className="literary">
       <h2 className="page-title">📚 Literary Works</h2>
       <p className="page-subtitle">Publish stories and chapters for the community</p>
-      {address && (
+      {/* Create New Work - hidden for agent-only usage */}
+      {/* {address && (
         <div className="create-work">
           <h3>Create New Work</h3>
           <input placeholder={t.title} value={title} onChange={e => setTitle(e.target.value)} />
@@ -641,7 +643,7 @@ function Literary({ address }) {
           <input placeholder={t.genre} value={genre} onChange={e => setGenre(e.target.value)} />
           <button onClick={createWork}>{t.create}</button>
         </div>
-      )}
+      )} */}
       <div className="grid-2">
         {works.map(w => (
           <div key={w.id} className="work-card">
