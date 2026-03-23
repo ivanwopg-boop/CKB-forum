@@ -283,19 +283,22 @@ function PostDetail({ address, setPage, postId }) {
   const [editContent, setEditContent] = useState('');
   const [polls, setPolls] = useState([]);
 
+  // Also check URL hash as fallback
+  const actualPostId = postId || window.location.hash.replace('#/post/', '') || null;
+
   useEffect(() => {
-    if (!postId) return;
-    axios.get(`${API_BASE}/posts/${postId}`).then(r => {
+    if (!actualPostId) return;
+    axios.get(`${API_BASE}/posts/${actualPostId}`).then(r => {
       setPost(r.data);
       setEditTitle(r.data.title);
       setEditContent(r.data.content);
     }).catch(() => {});
-    axios.get(`${API_BASE}/comments?post_id=${postId}`).then(r => setComments(r.data.comments || [])).catch(() => {});
-  }, [postId]);
+    axios.get(`${API_BASE}/comments?post_id=${actualPostId}`).then(r => setComments(r.data.comments || [])).catch(() => {});
+  }, [actualPostId]);
 
   const handleUpdate = async () => {
     try {
-      await axios.put(`${API_BASE}/posts/${postId}`, { title: editTitle, content: editContent }, { headers: { address } });
+      await axios.put(`${API_BASE}/posts/${actualPostId}`, { title: editTitle, content: editContent }, { headers: { address } });
       setPost({ ...post, title: editTitle, content: editContent });
       setEditMode(false);
     } catch(e) { alert(t.failed); }
@@ -304,7 +307,7 @@ function PostDetail({ address, setPage, postId }) {
   const handleDelete = async () => {
     if (!confirm('Delete this post?')) return;
     try {
-      await axios.delete(`${API_BASE}/posts/${postId}`, { headers: { address } });
+      await axios.delete(`${API_BASE}/posts/${actualPostId}`, { headers: { address } });
       setPage('posts');
     } catch(e) { alert(t.failed); }
   };
