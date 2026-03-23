@@ -293,6 +293,10 @@ function PostDetail({ address, setPage, postId }) {
       if (newId && newId !== actualPostId) {
         setActualPostId(newId);
       }
+      // Handle literary detail redirect
+      if (window.location.pathname.startsWith('/literary/') && window.location.pathname !== '/literary') {
+        setPage('literary');
+      }
     };
     window.addEventListener('hashchange', handleLocationChange);
     // Also check on mount and interval
