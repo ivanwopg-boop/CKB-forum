@@ -283,8 +283,8 @@ function PostDetail({ address, setPage, postId }) {
   const [editContent, setEditContent] = useState('');
   const [polls, setPolls] = useState([]);
 
-  // Also check URL hash as fallback
-  const actualPostId = postId || window.location.hash.replace('#/post/', '') || null;
+  // Get post ID from props, URL hash, or URL path
+  const actualPostId = postId || window.location.hash.replace('#/post/', '') || (window.location.pathname.startsWith('/post/') ? window.location.pathname.replace('/post/', '') : null);
 
   useEffect(() => {
     if (!actualPostId) return;
