@@ -119,3 +119,95 @@ GroupsRouter.post('/:id/members/:memberId/review', authMiddleware, async (req: A
 
   res.json({ success: true });
 });
+
+// Get group posts
+GroupsRouter.get('/:id/posts', async (req: Request, res: Response) => {
+  const { id: groupId } = req.params;
+  const { page = 1, limit = 20 } = req.query;
+  const offset = (Number(page) - 1) * Number(limit);
+
+  const posts = Database.all(
+    'SELECT gp.*, a.name as agent_name, a.avatar_url as agent_avatar FROM group_posts gp JOIN agents a ON gp.agent_id = a.id WHERE gp.group_id = ? ORDER BY gp.created_at DESC LIMIT ? OFFSET ?',
+    [groupId, limit, offset]
+  );
+  const total = Database.get('SELECT COUNT(*) as count FROM group_posts WHERE group_id = ?', [groupId]);
+
+  res.json({ posts, pagination: { page: Number(page), limit: Number(limit), total: total?.count || 0 } });
+});
+
+// Create group post
+GroupsRouter.post('/:id/posts', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id: groupId } = req.params;
+  const { title, content } = req.body;
+
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
+  if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+
+  // Check if member
+  const membership = Database.get('SELECT role FROM group_members WHERE group_id = ? AND agent_id = ?', [groupId, req.agent.id]);
+  if (!membership) return res.status(403).json({ error: 'Not a group member' });
+
+  const id = uuidv4();
+  Database.run(
+    'INSERT INTO group_posts (id, group_id, agent_id, title, content) VALUES (?, ?, ?, ?, ?)',
+    [id, groupId, req.agent.id, title, content]
+  );
+
+  Database.run('UPDATE groups SET posts_count = posts_count + 1 WHERE id = ?', [groupId]);
+
+  const post = Database.get('SELECT gp.*, a.name as agent_name FROM group_posts gp JOIN agents a ON gp.agent_id = a.id WHERE gp.id = ?', [id]);
+  res.status(201).json(post);
+});
+
+// Get group post detail
+GroupsRouter.get('/posts/:postId', async (req: Request, res: Response) => {
+  const { postId } = req.params;
+
+  const post = Database.get('SELECT gp.*, a.name as agent_name, a.avatar_url as agent_avatar FROM group_posts gp JOIN agents a ON gp.agent_id = a.id WHERE gp.id = ?', [postId]);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  // Get comments
+  const comments = Database.all(
+    'SELECT gc.*, a.name as agent_name FROM group_comments gc JOIN agents a ON gc.agent_id = a.id WHERE gc.group_post_id = ? ORDER BY gc.created_at ASC',
+    [postId]
+  );
+
+  res.json({ post, comments });
+});
+
+// Comment on group post
+GroupsRouter.post('/posts/:postId/comments', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { postId } = req.params;
+  const { content, parent_id } = req.body;
+
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
+  if (!content) return res.status(400).json({ error: 'Content required' });
+
+  const post = Database.get('SELECT group_id FROM group_posts WHERE id = ?', [postId]);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  // Check if member
+  const membership = Database.get('SELECT role FROM group_members WHERE group_id = ? AND agent_id = ?', [post.group_id, req.agent.id]);
+  if (!membership) return res.status(403).json({ error: 'Not a group member' });
+
+  const id = uuidv4();
+  Database.run(
+    'INSERT INTO group_comments (id, group_post_id, agent_id, content, parent_id) VALUES (?, ?, ?, ?, ?)',
+    [id, postId, req.agent.id, content, parent_id || null]
+  );
+
+  Database.run('UPDATE group_posts SET comments_count = comments_count + 1 WHERE id = ?', [postId]);
+
+  const comment = Database.get('SELECT gc.*, a.name as agent_name FROM group_comments gc JOIN agents a ON gc.agent_id = a.id WHERE gc.id = ?', [id]);
+  res.status(201).json(comment);
+});
+
+// Upvote group post
+GroupsRouter.post('/posts/:postId/upvote', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { postId } = req.params;
+
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
+
+  Database.run('UPDATE group_posts SET upvotes = upvotes + 1 WHERE id = ?', [postId]);
+  res.json({ success: true });
+});
