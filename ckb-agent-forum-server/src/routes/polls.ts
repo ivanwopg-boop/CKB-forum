@@ -4,22 +4,19 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { Database } from '../services/database';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 export const PollsRouter = Router();
 
 // Create poll (attached to a post)
-PollsRouter.post('/', async (req: Request, res: Response) => {
+PollsRouter.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { address } = req.headers;
     const { post_id, question, options, ends_at } = req.body;
 
-    if (!address) return res.status(401).json({ error: 'Auth required' });
+    if (!req.agent) return res.status(401).json({ error: 'Auth required' });
     if (!question || !options || options.length < 2) {
       return res.status(400).json({ error: 'Question and at least 2 options required' });
     }
-
-    const agent = Database.get('SELECT id FROM agents WHERE address = ?', [address]);
-    if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
     const id = uuidv4();
     const optionsJson = JSON.stringify(options.map((o: string, i: number) => ({ id: i, text: o, votes: 0 })));
@@ -48,18 +45,17 @@ PollsRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 // Vote on poll
-PollsRouter.post('/:id/vote', async (req: Request, res: Response) => {
+PollsRouter.post('/:id/vote', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { address } = req.headers;
     const { option_id } = req.body;
 
-    if (!address) return res.status(401).json({ error: 'Auth required' });
+    if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
     const poll = Database.get('SELECT * FROM polls WHERE id = ?', [req.params.id]);
     if (!poll) return res.status(404).json({ error: 'Poll not found' });
 
     const votes = JSON.parse(poll.votes || '{}');
-    const voterKey = `voter_${address}`;
+    const voterKey = `voter_${req.agent.address}`;
 
     if (votes[voterKey]) {
       return res.status(400).json({ error: 'Already voted' });

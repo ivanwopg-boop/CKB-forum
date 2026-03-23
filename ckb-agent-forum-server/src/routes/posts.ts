@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Database } from '../services/database';
 import { rateLimit } from '../middleware/ratelimit';
 import { AntiSpamService } from '../services/antispam';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 export const PostsRouter = Router();
 
@@ -59,24 +60,20 @@ PostsRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Create post (rate limited)
-PostsRouter.post('/', rateLimit('post'), async (req: Request, res: Response) => {
+// Create post (rate limited, requires auth)
+PostsRouter.post('/', rateLimit('post'), authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { address } = req.headers;
     const { title, content, tags } = req.body;
 
-    if (!address) return res.status(401).json({ error: 'Authentication required' });
+    if (!req.agent) return res.status(401).json({ error: 'Authentication required' });
     if (!title || !content) return res.status(400).json({ error: 'Missing title or content' });
-
-    const agent = Database.get('SELECT id FROM agents WHERE address = ?', [address]);
-    if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
     const id = uuidv4();
     const tagsStr = tags ? JSON.stringify(tags) : '[]';
 
     Database.run(
       'INSERT INTO posts (id, agent_id, title, content, tags) VALUES (?, ?, ?, ?, ?)',
-      [id, agent.id, title, content, tagsStr]
+      [id, req.agent!.id, title, content, tagsStr]
     );
 
     const post = Database.get('SELECT * FROM posts WHERE id = ?', [id]);
@@ -86,18 +83,16 @@ PostsRouter.post('/', rateLimit('post'), async (req: Request, res: Response) => 
   }
 });
 
-// Update post
-PostsRouter.put('/:id', async (req: Request, res: Response) => {
+// Update post (requires auth)
+PostsRouter.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { address } = req.headers;
     const { title, content } = req.body;
 
-    const agent = Database.get('SELECT id FROM agents WHERE address = ?', [address]);
-    if (!agent) return res.status(401).json({ error: 'Agent not found' });
+    if (!req.agent) return res.status(401).json({ error: 'Authentication required' });
 
     const result = Database.run(
       'UPDATE posts SET title = COALESCE(?, title), content = COALESCE(?, content), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND agent_id = ?',
-      [title, content, req.params.id, agent.id]
+      [title, content, req.params.id, req.agent.id]
     );
 
     if (result.changes === 0) return res.status(404).json({ error: 'Post not found or not authorized' });
@@ -109,14 +104,12 @@ PostsRouter.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Delete post
-PostsRouter.delete('/:id', async (req: Request, res: Response) => {
+// Delete post (requires auth)
+PostsRouter.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { address } = req.headers;
-    const agent = Database.get('SELECT id FROM agents WHERE address = ?', [address]);
-    if (!agent) return res.status(401).json({ error: 'Agent not found' });
+    if (!req.agent) return res.status(401).json({ error: 'Authentication required' });
 
-    const result = Database.run('DELETE FROM posts WHERE id = ? AND agent_id = ?', [req.params.id, agent.id]);
+    const result = Database.run('DELETE FROM posts WHERE id = ? AND agent_id = ?', [req.params.id, req.agent.id]);
     if (result.changes === 0) return res.status(404).json({ error: 'Post not found or not authorized' });
 
     res.json({ success: true });
@@ -125,10 +118,10 @@ PostsRouter.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Upvote
-PostsRouter.post('/:id/upvote', async (req: Request, res: Response) => {
+// Upvote (requires auth)
+PostsRouter.post('/:id/upvote', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.headers.address) return res.status(401).json({ error: 'Auth required' });
+    if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
     Database.run('UPDATE posts SET upvotes = upvotes + 1 WHERE id = ?', [req.params.id]);
     const post = Database.get('SELECT upvotes, downvotes FROM posts WHERE id = ?', [req.params.id]);

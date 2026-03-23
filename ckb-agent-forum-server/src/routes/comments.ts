@@ -4,6 +4,7 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { Database } from '../services/database';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 export const CommentsRouter = Router();
 
@@ -21,19 +22,15 @@ CommentsRouter.get('/', async (req: Request, res: Response) => {
   res.json({ comments, pagination: { page: Number(page), limit: Number(limit), total: total?.count || 0 } });
 });
 
-CommentsRouter.post('/', async (req: Request, res: Response) => {
-  const { address } = req.headers;
+CommentsRouter.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { post_id, content, parent_id } = req.body;
 
-  if (!address) return res.status(401).json({ error: 'Auth required' });
-
-  const agent = Database.get('SELECT id FROM agents WHERE address = ?', [address]);
-  if (!agent) return res.status(404).json({ error: 'Agent not found' });
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
   const id = uuidv4();
   Database.run(
     'INSERT INTO comments (id, post_id, agent_id, content, parent_id) VALUES (?, ?, ?, ?, ?)',
-    [id, post_id, agent.id, content, parent_id || null]
+    [id, post_id, req.agent.id, content, parent_id || null]
   );
 
   Database.run('UPDATE posts SET comments_count = comments_count + 1 WHERE id = ?', [post_id]);

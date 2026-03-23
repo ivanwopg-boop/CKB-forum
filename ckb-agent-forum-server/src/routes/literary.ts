@@ -4,6 +4,7 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { Database } from '../services/database';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 export const LiteraryRouter = Router();
 
@@ -23,29 +24,26 @@ LiteraryRouter.get('/works/:id', async (req: Request, res: Response) => {
   res.json(work);
 });
 
-LiteraryRouter.post('/works', async (req: Request, res: Response) => {
-  const { address } = req.headers;
+LiteraryRouter.post('/works', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { title, synopsis, genre } = req.body;
 
-  if (!address) return res.status(401).json({ error: 'Auth required' });
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
-  const agent = Database.get('SELECT id FROM agents WHERE address = ?', [address]);
   const id = uuidv4();
   Database.run(
     'INSERT INTO literary_works (id, agent_id, title, synopsis, genre) VALUES (?, ?, ?, ?, ?)',
-    [id, agent?.id, title, synopsis || '', genre || '']
+    [id, req.agent.id, title, synopsis || '', genre || '']
   );
 
   const work = Database.get('SELECT * FROM literary_works WHERE id = ?', [id]);
   res.status(201).json(work);
 });
 
-LiteraryRouter.post('/works/:id/chapters', async (req: Request, res: Response) => {
-  const { address } = req.headers;
+LiteraryRouter.post('/works/:id/chapters', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { title, content, order } = req.body;
   const { id: workId } = req.params;
 
-  if (!address) return res.status(401).json({ error: 'Auth required' });
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
   const chapterId = uuidv4();
   Database.run(
@@ -81,59 +79,56 @@ LiteraryRouter.get('/chapters/:id', async (req: Request, res: Response) => {
 });
 
 // Like a literary work
-LiteraryRouter.post('/works/:id/like', async (req: Request, res: Response) => {
-  const { address } = req.headers;
+LiteraryRouter.post('/works/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { id: workId } = req.params;
 
-  if (!address) return res.status(401).json({ error: 'Auth required' });
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
   // Toggle like
-  const existing = Database.get('SELECT id FROM literary_likes WHERE work_id = ? AND address = ?', [workId, address]);
+  const existing = Database.get('SELECT id FROM literary_likes WHERE work_id = ? AND address = ?', [workId, req.agent.address]);
   
   if (existing) {
     Database.run('DELETE FROM literary_likes WHERE id = ?', [existing.id]);
     Database.run('UPDATE literary_works SET likes_count = likes_count - 1 WHERE id = ?', [workId]);
     res.json({ liked: false });
   } else {
-    Database.run('INSERT INTO literary_likes (id, work_id, address) VALUES (?, ?, ?)', [uuidv4(), workId, address]);
+    Database.run('INSERT INTO literary_likes (id, work_id, address) VALUES (?, ?, ?)', [uuidv4(), workId, req.agent.address]);
     Database.run('UPDATE literary_works SET likes_count = likes_count + 1 WHERE id = ?', [workId]);
     res.json({ liked: true });
   }
 });
 
 // Subscribe to a literary work
-LiteraryRouter.post('/works/:id/subscribe', async (req: Request, res: Response) => {
-  const { address } = req.headers;
+LiteraryRouter.post('/works/:id/subscribe', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { id: workId } = req.params;
 
-  if (!address) return res.status(401).json({ error: 'Auth required' });
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
-  const existing = Database.get('SELECT id FROM literary_subscriptions WHERE work_id = ? AND address = ?', [workId, address]);
+  const existing = Database.get('SELECT id FROM literary_subscriptions WHERE work_id = ? AND address = ?', [workId, req.agent.address]);
   
   if (existing) {
     Database.run('DELETE FROM literary_subscriptions WHERE id = ?', [existing.id]);
     Database.run('UPDATE literary_works SET subscribers_count = subscribers_count - 1 WHERE id = ?', [workId]);
     res.json({ subscribed: false });
   } else {
-    Database.run('INSERT INTO literary_subscriptions (id, work_id, address) VALUES (?, ?, ?)', [uuidv4(), workId, address]);
+    Database.run('INSERT INTO literary_subscriptions (id, work_id, address) VALUES (?, ?, ?)', [uuidv4(), workId, req.agent.address]);
     Database.run('UPDATE literary_works SET subscribers_count = subscribers_count + 1 WHERE id = ?', [workId]);
     res.json({ subscribed: true });
   }
 });
 
 // Comment on a literary work
-LiteraryRouter.post('/works/:id/comments', async (req: Request, res: Response) => {
-  const { address } = req.headers;
+LiteraryRouter.post('/works/:id/comments', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { id: workId } = req.params;
   const { content } = req.body;
 
-  if (!address) return res.status(401).json({ error: 'Auth required' });
+  if (!req.agent) return res.status(401).json({ error: 'Auth required' });
   if (!content) return res.status(400).json({ error: 'Content required' });
 
   const id = uuidv4();
   Database.run(
     'INSERT INTO literary_comments (id, work_id, address, content) VALUES (?, ?, ?, ?)',
-    [id, workId, address, content]
+    [id, workId, req.agent.address, content]
   );
 
   const comment = Database.get('SELECT * FROM literary_comments WHERE id = ?', [id]);
