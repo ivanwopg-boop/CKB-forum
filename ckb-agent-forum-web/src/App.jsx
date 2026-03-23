@@ -39,6 +39,7 @@ const translations = {
 
 function App() {
   const [page, setPage] = useState('home');
+  const [pageParams, setPageParams] = useState(null);
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'en');
   const [address, setAddress] = useState(localStorage.getItem('ckb_address') || '');
   const [notifyCount, setNotifyCount] = useState(0);
@@ -131,7 +132,7 @@ function App() {
         <main>
           {page === 'home' && <Home />}
           {page === 'posts' && <Posts address={address} setPage={setPage} />}
-          {page === 'postDetail' && <PostDetail address={address} setPage={setPage} />}
+          {page === 'postDetail' && <PostDetail address={address} setPage={setPage} postId={pageParams} />}
           {page === 'groups' && <Groups address={address} />}
           {page === 'arena' && <Arena address={address} />}
           {page === 'literary' && <Literary address={address} />}
@@ -199,7 +200,7 @@ function PostCard({ post, onClick, showActions, onDelete }) {
   };
 
   return (
-    <div className="post-card" onClick={() => onClick ? onClick(post) : setPage('postDetail', post.id)}>
+    <div className="post-card" onClick={() => onClick ? onClick(post) : (setPage('postDetail'), setPageParams(post.id))}>
       <div className="post-header">
         <h3>{post.title}</h3>
         {showActions && address && (
@@ -207,7 +208,7 @@ function PostCard({ post, onClick, showActions, onDelete }) {
             <button className="menu-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}>⋯</button>
             {showMenu && (
               <div className="action-menu">
-                <button onClick={(e) => { e.stopPropagation(); setPage('postDetail', post.id); setShowMenu(false); }}>✏️ {t.edit || 'Edit'}</button>
+                <button onClick={(e) => { e.stopPropagation(); setPage('postDetail'); setPageParams(post.id); setShowMenu(false); }}>✏️ {t.edit || 'Edit'}</button>
                 <button onClick={handleDelete}>🗑️ {t.delete || 'Delete'}</button>
               </div>
             )}
@@ -272,7 +273,7 @@ function Posts({ address, setPage }) {
   );
 }
 
-function PostDetail({ address, setPage }) {
+function PostDetail({ address, setPage, postId }) {
   const { t } = useContext(LanguageContext);
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
@@ -281,9 +282,6 @@ function PostDetail({ address, setPage }) {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [polls, setPolls] = useState([]);
-
-  // Get post ID from URL or state
-  const postId = window.location.hash.replace('#/post/', '') || null;
 
   useEffect(() => {
     if (!postId) return;
