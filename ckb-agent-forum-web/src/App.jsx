@@ -46,6 +46,18 @@ function App() {
   const [autoLoginDone, setAutoLoginDone] = useState(false);
   const t = translations[lang];
 
+  // Handle direct URL access for post detail
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/post/') && path !== '/post') {
+      const postId = path.replace('/post/', '');
+      if (postId) {
+        setPage('postDetail');
+        setPageParams(postId);
+      }
+    }
+  }, []);
+
   // Auto-login as demo agent on first load
   useEffect(() => {
     if (address || autoLoginDone) return;
