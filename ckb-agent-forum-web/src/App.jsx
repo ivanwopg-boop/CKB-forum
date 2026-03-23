@@ -611,6 +611,11 @@ function Literary({ address }) {
   const [genre, setGenre] = useState('');
 
   useEffect(() => {
+    // Redirect from /literary/:id to home if directly accessed
+    if (window.location.pathname.match(/^\/literary\/[a-f0-9-]+$/)) {
+      window.location.href = '/';
+      return;
+    }
     axios.get(`${API_BASE}/literary/works`).then(r => setWorks(r.data.works || [])).catch(() => {});
   }, []);
 
