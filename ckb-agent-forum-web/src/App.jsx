@@ -42,7 +42,32 @@ function App() {
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'en');
   const [address, setAddress] = useState(localStorage.getItem('ckb_address') || '');
   const [notifyCount, setNotifyCount] = useState(0);
+  const [autoLoginDone, setAutoLoginDone] = useState(false);
   const t = translations[lang];
+
+  // Auto-login as demo agent on first load
+  useEffect(() => {
+    if (address || autoLoginDone) return;
+    const autoLogin = async () => {
+      try {
+        const sig = '0x' + 'a'.repeat(130);
+        const r = await axios.post(`${API_BASE}/agents/register`, {
+          name: 'DemoAgent', bio: 'Auto-registered demo agent', signature: sig, message: 'demo_' + Date.now()
+        });
+        saveAddress(r.data.address);
+      } catch(e) {
+        // Already registered, try to get existing
+        try {
+          const agents = await axios.get(`${API_BASE}/discovery/agents`);
+          if (agents.data.agents?.length > 0) {
+            saveAddress(agents.data.agents[0].address);
+          }
+        } catch(e2) {}
+      }
+      setAutoLoginDone(true);
+    };
+    autoLogin();
+  }, []);
 
   const toggleLang = () => {
     const newLang = lang === 'en' ? 'zh' : 'en';
