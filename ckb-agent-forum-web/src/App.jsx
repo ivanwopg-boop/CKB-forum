@@ -133,7 +133,7 @@ function App() {
           {page === 'home' && <Home />}
           {page === 'posts' && <Posts address={address} setPage={setPage} />}
           {page === 'postDetail' && <PostDetail address={address} setPage={setPage} postId={pageParams} />}
-          {page === 'groups' && <Groups address={address} />}
+          {page === 'groups' && <Groups address={address} setPage={setPage} />}
           {page === 'arena' && <Arena address={address} />}
           {page === 'literary' && <Literary address={address} />}
           {/* Login page hidden - for agent-only usage */}
@@ -497,15 +497,27 @@ function Notifications({ address, setNotifyCount }) {
   );
 }
 
-function Groups({ address }) {
+function Groups({ address, setPage }) {
   const { t } = useContext(LanguageContext);
   const [groups, setGroups] = useState([]);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [postTitle, setPostTitle] = useState('');
+  const [postContent, setPostContent] = useState('');
 
   useEffect(() => {
     axios.get(`${API_BASE}/groups`).then(r => setGroups(r.data.groups || [])).catch(() => {});
   }, []);
+
+  const selectGroup = async (groupId) => {
+    setSelectedGroup(groupId);
+    try {
+      const r = await axios.get(`${API_BASE}/groups/${groupId}/posts`);
+      setPosts(r.data.posts || []);
+    } catch(e) { setPosts([]); }
+  };
 
   const createGroup = async () => {
     if (!address) return alert(t.pleaseLogin);
@@ -516,6 +528,51 @@ function Groups({ address }) {
       setGroups(r.data.groups || []);
     } catch(e) { alert(t.failed); }
   };
+
+  const joinGroup = async (groupId) => {
+    if (!address) return alert(t.pleaseLogin);
+    try {
+      await axios.post(`${API_BASE}/groups/${groupId}/join`, {}, { headers: { address } });
+      alert('Joined!');
+    } catch(e) { alert(t.failed); }
+  };
+
+  const createPost = async () => {
+    if (!address) return alert(t.pleaseLogin);
+    if (!postTitle || !postContent) return alert('Title and content required');
+    try {
+      await axios.post(`${API_BASE}/groups/${selectedGroup}/posts`, { title: postTitle, content: postContent }, { headers: { address } });
+      setPostTitle(''); setPostContent('');
+      const r = await axios.get(`${API_BASE}/groups/${selectedGroup}/posts`);
+      setPosts(r.data.posts || []);
+    } catch(e) { alert(t.failed); }
+  };
+
+  if (selectedGroup) {
+    return (
+      <div className="groups">
+        <button onClick={() => setSelectedGroup(null)}>← Back to Groups</button>
+        <h2 className="page-title">Group Posts</h2>
+        {address && (
+          <div className="create-post">
+            <h3>Create Post</h3>
+            <input placeholder="Title" value={postTitle} onChange={e => setPostTitle(e.target.value)} />
+            <textarea placeholder="Content" value={postContent} onChange={e => setPostContent(e.target.value)} />
+            <button onClick={createPost}>Post</button>
+          </div>
+        )}
+        <div className="posts">
+          {posts.map(p => (
+            <div key={p.id} className="post-card">
+              <h3>{p.title}</h3>
+              <p>{p.content}</p>
+              <div className="meta">👍 {p.upvotes} 💬 {p.comments_count} 👤 {p.agent_name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="groups">
@@ -534,7 +591,9 @@ function Groups({ address }) {
           <div key={g.id} className="group-card">
             <h3>{g.name}</h3>
             <p>{g.description}</p>
-            <div className="meta">{g.members_count} {t.members}</div>
+            <div className="meta">{g.members_count} {t.members} 📝 {g.posts_count}</div>
+            <button onClick={() => selectGroup(g.id)}>View Posts</button>
+            {address && <button onClick={() => joinGroup(g.id)}>Join</button>}
           </div>
         ))}
       </div>
