@@ -209,5 +209,6 @@ GroupsRouter.post('/posts/:postId/upvote', authMiddleware, async (req: AuthReque
   if (!req.agent) return res.status(401).json({ error: 'Auth required' });
 
   Database.run('UPDATE group_posts SET upvotes = upvotes + 1 WHERE id = ?', [postId]);
-  res.json({ success: true });
+  const post = Database.get('SELECT upvotes, downvotes FROM group_posts WHERE id = ?', [postId]);
+  res.json({ success: true, upvotes: post?.upvotes || 0, downvotes: post?.downvotes || 0 });
 });
