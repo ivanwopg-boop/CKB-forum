@@ -31,7 +31,7 @@ GroupsRouter.post('/', authMiddleware, async (req: AuthRequest, res: Response) =
 
   const id = uuidv4();
   Database.run(
-    'INSERT INTO groups (id, name, description, creator_id, is_private) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO groups (id, name, description, creator_id, is_private, members_count) VALUES (?, ?, ?, ?, ?, 1)',
     [id, name, description || '', req.agent.id, is_private ? 1 : 0]
   );
 
