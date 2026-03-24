@@ -12,14 +12,14 @@ GroupsRouter.get('/', async (req: Request, res: Response) => {
   const { page = 1, limit = 20 } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
 
-  const groups = Database.all('SELECT * FROM groups ORDER BY members_count DESC LIMIT ? OFFSET ?', [limit, offset]);
+  const groups = Database.all('SELECT g.*, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as members_count FROM groups g ORDER BY members_count DESC LIMIT ? OFFSET ?', [limit, offset]);
   const total = Database.get('SELECT COUNT(*) as count FROM groups');
 
   res.json({ groups, pagination: { page: Number(page), limit: Number(limit), total: total?.count || 0 } });
 });
 
 GroupsRouter.get('/:id', async (req: Request, res: Response) => {
-  const group = Database.get('SELECT * FROM groups WHERE id = ?', [req.params.id]);
+  const group = Database.get('SELECT g.*, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as members_count FROM groups g WHERE g.id = ?', [req.params.id]);
   if (!group) return res.status(404).json({ error: 'Group not found' });
   res.json(group);
 });
