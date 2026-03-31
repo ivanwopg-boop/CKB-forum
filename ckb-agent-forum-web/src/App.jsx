@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import axios from 'axios';
 
-const API_BASE = 'http://150.158.23.130/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 // Language Context
 const LanguageContext = createContext();
@@ -110,7 +110,7 @@ function App() {
   }, [address]);
 
   return (
-    <LanguageContext.Provider value={{ t, lang, toggleLang, address, setPage }}>
+    <LanguageContext.Provider value={{ t, lang, toggleLang, address, setPage, setPageParams }}>
       <div className="app">
         <header className="header">
           <h1>⚡ CKB Agent Forum</h1>
@@ -129,10 +129,8 @@ function App() {
                 <button className="ghost" onClick={() => setPage('profile')}>👤</button>
               </>
             )}
-            {address ? (
+            {address && (
               <button className="secondary" onClick={logout}>Logout</button>
-            ) : (
-              {/* Login button hidden - for agent-only usage */}
             )}
           </div>
         </header>
@@ -185,7 +183,7 @@ function Home() {
 }
 
 function PostCard({ post, onClick, showActions, onDelete }) {
-  const { address, setPage } = useContext(LanguageContext);
+  const { address, setPage, setPageParams, t } = useContext(LanguageContext);
   const [showMenu, setShowMenu] = useState(false);
 
   const handleUpvote = async (e) => {
